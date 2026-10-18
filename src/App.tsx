@@ -14,6 +14,7 @@ export default function App() {
   };
   const signOut = () => {
     sessionStorage.removeItem("lava-user");
+    sessionStorage.removeItem("lava-dashboard-view");
     setUsername("");
   };
   if (!username) return <Login onLogin={signIn} />;
