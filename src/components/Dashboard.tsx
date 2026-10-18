@@ -9,15 +9,37 @@ import { ExtendedDemoCard } from "./ExtendedDemoCard";
 import { SectionShowcase } from "./SectionShowcase";
 import { LiveDashboardCard } from "./LiveDashboardCard";
 
+function loadDashboardView() {
+  const stored = sessionStorage.getItem("lava-dashboard-view");
+  if (!stored) return { activeSection: 1, activeGroup: "All components", query: "" };
+  try {
+    const parsed: unknown = JSON.parse(stored);
+    if (!parsed || typeof parsed !== "object") return { activeSection: 1, activeGroup: "All components", query: "" };
+    const view = parsed as Record<string, unknown>;
+    const sectionIds = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11];
+    return {
+      activeSection: typeof view.activeSection === "number" && sectionIds.includes(view.activeSection) ? view.activeSection : 1,
+      activeGroup: typeof view.activeGroup === "string" && groups.includes(view.activeGroup) ? view.activeGroup : "All components",
+      query: typeof view.query === "string" ? view.query : "",
+    };
+  } catch {
+    return { activeSection: 1, activeGroup: "All components", query: "" };
+  }
+}
+
 export function Dashboard({ username, onLogout, onPrivacy }: { username: string; onLogout: () => void; onPrivacy: () => void }) {
-  const [activeGroup, setActiveGroup] = useState("All components");
-  const [activeSection, setActiveSection] = useState(1);
-  const [query, setQuery] = useState("");
+  const [initialView] = useState(loadDashboardView);
+  const [activeGroup, setActiveGroup] = useState(initialView.activeGroup);
+  const [activeSection, setActiveSection] = useState(initialView.activeSection);
+  const [query, setQuery] = useState(initialView.query);
   const [resetCounter, setResetCounter] = useState(0);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   useEffect(() => {
     window.scrollTo(0, 0);
   }, []);
+  useEffect(() => {
+    sessionStorage.setItem("lava-dashboard-view", JSON.stringify({ activeSection, activeGroup, query }));
+  }, [activeGroup, activeSection, query]);
   const sections = [
     { id: 1, name: "Form inputs", range: "01—60", firstId: 1, lastId: 60 },
     { id: 2, name: "Selection & choices", range: "61—120", firstId: 61, lastId: 120 },
