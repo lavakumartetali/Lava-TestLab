@@ -7,7 +7,7 @@ import { PrivacyPolicy } from "./components/PrivacyPolicy";
 export default function App() {
   const [username, setUsername] = useState(() => sessionStorage.getItem("lava-user") || "");
   const [showPrivacy, setShowPrivacy] = useState(false);
-  if (window.location.pathname === "/storefront") return <EndToEndStore />;
+  if (window.location.pathname.replace(/\/+$/, "") === "/storefront") return <EndToEndStore />;
   const signIn = (user: string) => {
     sessionStorage.setItem("lava-user", user);
     setUsername(user);
