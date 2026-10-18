@@ -57,6 +57,7 @@ type Order = { id: string; date: string; total: number; status: string; items: s
 type CheckoutAddress = { name: string; email: string; phone: string; address: string; city: string; postal: string };
 
 const storeDemoCredentials = { email: "shopper@northstar.test", password: "ShopDemo2026!" };
+const storeScreens: StoreScreen[] = ["login", "home", "catalog", "product", "cart", "checkout", "confirmation", "account", "wishlist", "admin"];
 const categories = ["All", "Audio", "Home", "Travel", "Tech", "Style", "Kitchen"];
 const seedProducts: Product[] = [
   { id: 1, name: "Studio Wireless Headphones", category: "Audio", description: "Rich studio sound, adaptive noise control, and a full-day battery in a comfortable over-ear fit.", price: 129, oldPrice: 169, rating: 4.8, reviews: 284, stock: 18, color: "#ded3c4", accent: "#a48261", badge: "BESTSELLER" },
@@ -86,29 +87,103 @@ const seedProducts: Product[] = [
 ];
 
 const money = (amount: number) => new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(amount);
+type StoredStoreView = {
+  screen: StoreScreen;
+  email: string;
+  cart: Record<number, number>;
+  wishlist: number[];
+  selectedProductId: number | null;
+  activeCategory: string;
+  search: string;
+  sort: string;
+  maxPrice: number;
+  minRating: number;
+  inStockOnly: boolean;
+  page: number;
+  checkoutStep: number;
+  shippingMethod: string;
+  paymentMethod: string;
+  promo: string;
+  promoApplied: boolean;
+  checkoutAddress: CheckoutAddress;
+  orderNumber: string;
+};
+
+function loadStoreView(): Partial<StoredStoreView> {
+  const stored = sessionStorage.getItem("lava-store-view");
+  if (!stored) return {};
+  try {
+    const parsed: unknown = JSON.parse(stored);
+    if (!parsed || typeof parsed !== "object") return {};
+    const view = parsed as Record<string, unknown>;
+    const cart: Record<number, number> = {};
+    if (view.cart && typeof view.cart === "object" && !Array.isArray(view.cart)) {
+      Object.entries(view.cart).forEach(([id, count]) => {
+        const productId = Number(id);
+        if (Number.isSafeInteger(productId) && productId > 0 && typeof count === "number" && Number.isSafeInteger(count) && count > 0) cart[productId] = count;
+      });
+    }
+    const wishlist = Array.isArray(view.wishlist) ? view.wishlist.filter((id): id is number => typeof id === "number" && Number.isSafeInteger(id) && id > 0) : [];
+    const address = view.checkoutAddress && typeof view.checkoutAddress === "object" ? view.checkoutAddress as Record<string, unknown> : {};
+    const checkoutAddress: CheckoutAddress = {
+      name: typeof address.name === "string" ? address.name : "",
+      email: typeof address.email === "string" ? address.email : "",
+      phone: typeof address.phone === "string" ? address.phone : "",
+      address: typeof address.address === "string" ? address.address : "",
+      city: typeof address.city === "string" ? address.city : "",
+      postal: typeof address.postal === "string" ? address.postal : "",
+    };
+    return {
+      screen: typeof view.screen === "string" && storeScreens.includes(view.screen as StoreScreen) ? view.screen as StoreScreen : "login",
+      email: typeof view.email === "string" ? view.email : "",
+      cart,
+      wishlist,
+      selectedProductId: typeof view.selectedProductId === "number" && Number.isSafeInteger(view.selectedProductId) ? view.selectedProductId : null,
+      activeCategory: typeof view.activeCategory === "string" && categories.includes(view.activeCategory) ? view.activeCategory : "All",
+      search: typeof view.search === "string" ? view.search : "",
+      sort: typeof view.sort === "string" ? view.sort : "featured",
+      maxPrice: typeof view.maxPrice === "number" && Number.isFinite(view.maxPrice) ? view.maxPrice : 250,
+      minRating: typeof view.minRating === "number" && Number.isFinite(view.minRating) ? view.minRating : 0,
+      inStockOnly: typeof view.inStockOnly === "boolean" ? view.inStockOnly : false,
+      page: typeof view.page === "number" && Number.isSafeInteger(view.page) && view.page > 0 ? view.page : 1,
+      checkoutStep: typeof view.checkoutStep === "number" && Number.isInteger(view.checkoutStep) && view.checkoutStep >= 1 && view.checkoutStep <= 4 ? view.checkoutStep : 1,
+      shippingMethod: view.shippingMethod === "express" ? "express" : "standard",
+      paymentMethod: view.paymentMethod === "wallet" ? "wallet" : "card",
+      promo: typeof view.promo === "string" ? view.promo : "",
+      promoApplied: typeof view.promoApplied === "boolean" ? view.promoApplied : false,
+      checkoutAddress,
+      orderNumber: typeof view.orderNumber === "string" ? view.orderNumber : "",
+    };
+  } catch {
+    return {};
+  }
+}
+
 const orderSeed: Order[] = [
   { id: "LAVA-28417", date: "Oct 14, 2026", total: 161, status: "Delivered", items: ["Studio Wireless Headphones", "Field Notes Collection"] },
   { id: "LAVA-27106", date: "Sep 28, 2026", total: 84, status: "Shipped", items: ["Everyday Canvas Backpack"] },
 ];
 
 export function EndToEndStore() {
-  const [screen, setScreen] = useState<StoreScreen>("login");
-  const [email, setEmail] = useState("");
+  const [initialView] = useState(loadStoreView);
+  const [initialProduct] = useState(() => seedProducts.find((product) => product.id === initialView.selectedProductId) ?? null);
+  const [screen, setScreen] = useState<StoreScreen>(() => initialView.screen === "product" && !initialProduct ? "catalog" : initialView.screen ?? "login");
+  const [email, setEmail] = useState(initialView.email ?? "");
   const [password, setPassword] = useState("");
   const [loginError, setLoginError] = useState("");
   const [loginLoading, setLoginLoading] = useState(false);
   const [products, setProducts] = useState(seedProducts);
-  const [cart, setCart] = useState<Record<number, number>>({});
-  const [wishlist, setWishlist] = useState<number[]>([]);
+  const [cart, setCart] = useState<Record<number, number>>(initialView.cart ?? {});
+  const [wishlist, setWishlist] = useState<number[]>(initialView.wishlist ?? []);
   const [orders, setOrders] = useState(orderSeed);
-  const [activeCategory, setActiveCategory] = useState("All");
-  const [search, setSearch] = useState("");
-  const [sort, setSort] = useState("featured");
-  const [maxPrice, setMaxPrice] = useState(250);
-  const [minRating, setMinRating] = useState(0);
-  const [inStockOnly, setInStockOnly] = useState(false);
-  const [page, setPage] = useState(1);
-  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+  const [activeCategory, setActiveCategory] = useState(initialView.activeCategory ?? "All");
+  const [search, setSearch] = useState(initialView.search ?? "");
+  const [sort, setSort] = useState(initialView.sort ?? "featured");
+  const [maxPrice, setMaxPrice] = useState(initialView.maxPrice ?? 250);
+  const [minRating, setMinRating] = useState(initialView.minRating ?? 0);
+  const [inStockOnly, setInStockOnly] = useState(initialView.inStockOnly ?? false);
+  const [page, setPage] = useState(initialView.page ?? 1);
+  const [selectedProduct, setSelectedProduct] = useState<Product | null>(initialProduct);
   const [quickViewProduct, setQuickViewProduct] = useState<Product | null>(null);
   const [quantity, setQuantity] = useState(1);
   const [cartDrawerOpen, setCartDrawerOpen] = useState(false);
@@ -118,18 +193,26 @@ export function EndToEndStore() {
     const timeoutId = window.setTimeout(() => setNotice(""), 2000);
     return () => window.clearTimeout(timeoutId);
   }, [notice]);
-  const [checkoutStep, setCheckoutStep] = useState(1);
-  const [shippingMethod, setShippingMethod] = useState("standard");
-  const [paymentMethod, setPaymentMethod] = useState("card");
-  const [promo, setPromo] = useState("");
-  const [promoApplied, setPromoApplied] = useState(false);
+  const [checkoutStep, setCheckoutStep] = useState(initialView.checkoutStep ?? 1);
+  const [shippingMethod, setShippingMethod] = useState(initialView.shippingMethod ?? "standard");
+  const [paymentMethod, setPaymentMethod] = useState(initialView.paymentMethod ?? "card");
+  const [promo, setPromo] = useState(initialView.promo ?? "");
+  const [promoApplied, setPromoApplied] = useState(initialView.promoApplied ?? false);
   const [checkoutTransitioning, setCheckoutTransitioning] = useState(false);
-  const [checkoutAddress, setCheckoutAddress] = useState<CheckoutAddress>({ name: "", email: "", phone: "", address: "", city: "", postal: "" });
-  const [orderNumber, setOrderNumber] = useState("");
+  const [checkoutAddress, setCheckoutAddress] = useState<CheckoutAddress>(initialView.checkoutAddress ?? { name: "", email: "", phone: "", address: "", city: "", postal: "" });
+  const [orderNumber, setOrderNumber] = useState(initialView.orderNumber ?? "");
   const [newProductName, setNewProductName] = useState("");
   const [newProductPrice, setNewProductPrice] = useState("");
   const [editingProductId, setEditingProductId] = useState<number | null>(null);
   const [newsletterEmail, setNewsletterEmail] = useState("");
+
+  useEffect(() => {
+    sessionStorage.setItem("lava-store-view", JSON.stringify({
+      screen, email, cart, wishlist, selectedProductId: selectedProduct?.id ?? null,
+      activeCategory, search, sort, maxPrice, minRating, inStockOnly, page,
+      checkoutStep, shippingMethod, paymentMethod, promo, promoApplied, checkoutAddress, orderNumber,
+    }));
+  }, [screen, email, cart, wishlist, selectedProduct, activeCategory, search, sort, maxPrice, minRating, inStockOnly, page, checkoutStep, shippingMethod, paymentMethod, promo, promoApplied, checkoutAddress, orderNumber]);
 
   const cartItems = useMemo(() => products.filter((product) => cart[product.id]), [cart, products]);
   const cartCount = Object.values(cart).reduce((total, count) => total + count, 0);
@@ -260,11 +343,28 @@ export function EndToEndStore() {
     setNotice(`${product.name} removed from the catalog.`);
   };
   const signOut = () => {
+    sessionStorage.removeItem("lava-store-view");
     setScreen("login");
     setEmail("");
     setPassword("");
     setLoginError("");
     setCart({});
+    setWishlist([]);
+    setSelectedProduct(null);
+    setActiveCategory("All");
+    setSearch("");
+    setSort("featured");
+    setMaxPrice(250);
+    setMinRating(0);
+    setInStockOnly(false);
+    setPage(1);
+    setCheckoutStep(1);
+    setShippingMethod("standard");
+    setPaymentMethod("card");
+    setPromo("");
+    setPromoApplied(false);
+    setCheckoutAddress({ name: "", email: "", phone: "", address: "", city: "", postal: "" });
+    setOrderNumber("");
     setCartDrawerOpen(false);
     setNotice("");
   };
