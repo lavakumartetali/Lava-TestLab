@@ -217,8 +217,8 @@ function MediaWorkbench() {
       <p className="media-iframe-caption">Sandboxed local iframe preview</p>
     </SuiteCard>
     <SuiteCard id={262} title="Native video & audio playback" description="Test play, pause, seek, duration, and media loading with the provided local samples.">
-      <video className="local-video" src={new URL("../../media/media/Demo.mp4", import.meta.url).href} controls playsInline onPlay={() => setMessage("Video playback started.")} onPause={() => setMessage("Video playback paused.")} />
-      <audio className="local-audio" src={new URL("../../media/media/Audio.wav", import.meta.url).href} controls onPlay={() => setMessage("Audio playback started.")} onPause={() => setMessage("Audio playback paused.")} />
+      <video className="local-video" src={new URL("../../media/Demo.mp4", import.meta.url).href} controls playsInline onPlay={() => setMessage("Video playback started.")} onPause={() => setMessage("Video playback paused.")} />
+      <audio className="local-audio" src={new URL("../../media/Audio.wav", import.meta.url).href} controls onPlay={() => setMessage("Audio playback started.")} onPause={() => setMessage("Audio playback paused.")} />
       <div className="selection-feedback" role="status">{message}</div>
     </SuiteCard>
     <SuiteCard id={266} title="Image, alternative text & lightbox" description="Focused automation coverage: image loading, alt text, lazy loading, and an expandable preview contained in this card.">
