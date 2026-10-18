@@ -1,0 +1,12 @@
+{
+  "rewrites": [
+    {
+      "source": "/storefront",
+      "destination": "/"
+    },
+    {
+      "source": "/storefront/",
+      "destination": "/"
+    }
+  ]
+}
