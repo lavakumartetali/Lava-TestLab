@@ -7,8 +7,8 @@ const localMedia = {
     new URL("../../media/Image2.png", import.meta.url).href,
     new URL("../../media/Image3.png", import.meta.url).href,
   ],
-  audio: new URL("../../media/media/Audio.wav", import.meta.url).href,
-  video: new URL("../../media/media/Demo.mp4", import.meta.url).href,
+  audio: new URL("../../media/Audio.wav", import.meta.url).href,
+  video: new URL("../../media/Demo.mp4", import.meta.url).href,
 };
 
 export function ExtendedDemoCard({ item, onLogout }: { item: DemoItem; onLogout: () => void }) {
